@@ -1,0 +1,19 @@
+{
+  "name": "etb-evaluator",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/prompts": "^2.4.9"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "ofetch": "^1.4.1",
+    "prompts": "^2.4.2"
+  },
+  "scripts": {
+    "start": "bun run src/index.ts"
+  }
+}

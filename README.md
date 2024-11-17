@@ -1,2 +1,3 @@
-# etb-evaluator
- Pokémon ETB Evaluator
+# ETB Evaluator
+
+Pokémon ETB Evaluator
