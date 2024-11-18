@@ -20,6 +20,12 @@ export interface Blueprint {
     expansion_id: number
     image_url: string
     card_market_ids: number[] | null
+    editable_properties: {
+        name: string
+        type: string
+        default_value: any
+        possible_values: any[]
+    }[]
 }
 
 export interface Product {
@@ -57,10 +63,10 @@ export const rarityMap = {
     "Rare ACE": "ASR",
     "Ultra Rare": "UR",
     "Hyper Rare": "HR",
+    "Secret Rare": "HR", // Only on Scarlet & Violet expansions
     "Double Rare": "DR",
-    "Rare": "R",
-    "Uncommon": "UC",
-    "Common": "C"
+    "Shiny Ultra Rare": "SUR",
+    "Shiny Holo Rare": "SR",
 } as const
 
 export type Rarity = keyof typeof rarityMap
