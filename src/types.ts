@@ -67,6 +67,9 @@ export const rarityMap = {
     "Double Rare": "DR",
     "Shiny Ultra Rare": "SUR",
     "Shiny Holo Rare": "SR",
+    "Common": "C",
+    "Uncommon": "U",
+    "Rare": "R",
 } as const
 
 export type Rarity = keyof typeof rarityMap
@@ -81,7 +84,7 @@ export interface PokemonProperties {
     pokemon_language: string
     pokemon_type: string
     signed: boolean
-    pokemon_rarity: Rarity
+    pokemon_rarity: string
     first_edition: boolean
     altered: boolean
 }
