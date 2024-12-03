@@ -4,6 +4,7 @@ import pullRates from './pull_rates.json'
 import prompts from "prompts"
 //import Turbit from 'turbit'
 import { BaseN } from 'js-combinatorics'
+import { SingleBar, Presets } from 'cli-progress'
 
 const authFetch = ofetch.create({
     baseURL: "https://api.cardtrader.com/api/v2",
@@ -90,7 +91,7 @@ console.log(orderedProducts.slice(0, 10)
 
 console.log(`\nTotal products: ${products.length}`)
 
-const totPacks = 3 // WARNING: DON'T GO FURTHER THAN 3 PACKS OR YOUR PC WILL DIE
+const totPacks = 3 // WARNING: DON'T GO FURTHER THAN 4 PACKS OR YOUR PC WILL DIE
 
 console.time('Combinations')
 
@@ -113,15 +114,33 @@ const combos = new BaseN(products.map(p => {
 
 //console.dir(combos)
 
-const etbPrice = 15
+// Initialize the progress bar
+const progressBar = new SingleBar(
+    {
+        format: 'Processing Combinations | {bar} | {percentage}% || {value}/{total} combos',
+    },
+    Presets.shades_classic
+);
+
+progressBar.start(Number(combos.length), 0);
+
+const etbPrice = 5 * totPacks
 let totWorth = 0
+let processed = 0;
 
 for (const combo of combos) {
     const worth = combo.reduce((acc, c) => acc + c.price, 0)
     const rate = combo.reduce((acc, c) => acc * c.rarity, 1)
     //console.log(`Worth: ${worth.toFixed(2)} | Rate: ${rate}`)
     if (worth >= etbPrice) totWorth += rate
+
+    // Update the progress bar
+    processed += 1;
+    progressBar.update(processed);
 }
+
+// Stop the progress bar
+progressBar.stop();
 
 console.timeEnd('Combinations')
 const totCombos = Number(combos.length)
