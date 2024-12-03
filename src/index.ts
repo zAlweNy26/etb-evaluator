@@ -46,6 +46,7 @@ if (!specificExp) {
     process.exit(1)
 }
 
+const anyPullRates: Record<string, number> = pullRates[response.expansion.toUpperCase() as keyof typeof pullRates].any
 const specificPullRates: Record<string, number> = pullRates[response.expansion.toUpperCase() as keyof typeof pullRates].specific
 
 const getPullRate = (rarity: string) => {
@@ -93,12 +94,26 @@ const totPacks = 3 // WARNING: DON'T GO FURTHER THAN 3 PACKS OR YOUR PC WILL DIE
 
 console.time('Combinations')
 
-const combos = new BaseN(products.map(p => ({ 
-    price: p.price.cents / 100, 
-    rarity: 1 / (specificPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]] ?? 1) 
-})), totPacks)
+const rareCards = products.filter(p => p.properties_hash.pokemon_rarity === 'Rare').length;
+//console.log(`Rare cards: ${rareCards}`)
 
-const etbPrice = 0
+const combos = new BaseN(products.map(p => {
+    let rate = (1 / anyPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]]) / products.filter(s => s.properties_hash.pokemon_rarity === p.properties_hash.pokemon_rarity).length
+    //let rate = 1 / specificPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]]
+    if (p.properties_hash.pokemon_rarity === 'Rare') {
+        const allRates = Object.values(anyPullRates).reduce((acc, r) => acc + (1 / r), 0)
+        rate = (1 - allRates) / rareCards
+    }
+    //console.log(rate)
+    return { 
+        price: p.price.cents / 100, 
+        rarity: rate
+    }
+}), totPacks)
+
+//console.dir(combos)
+
+const etbPrice = 15
 let totWorth = 0
 
 for (const combo of combos) {
@@ -110,9 +125,11 @@ for (const combo of combos) {
 
 console.timeEnd('Combinations')
 const totCombos = Number(combos.length)
+console.log(`Total combinations: ${totCombos}`)
 
-// console.log(`\nWorth: ${totWorth} / ${combos.length} (${((totWorth / Number(combos.length)) * 100).toFixed(5)} %)`)
-console.log(`\nWorth: ${totWorth} / ${totCombos} (${((totWorth / totCombos) * 100).toFixed(5)} %)`) // TODO: Fix the algorithm
+// TODO: Check if the algorithm is correct
+//console.log(`\nWorth: ${totWorth} / ${totCombos} (${(totWorth * 100).toFixed(5)} %)`)
+console.log(`\nProbability of pay off: ${(totWorth * 100).toFixed(5)} %`)
 
 /*
 const turbit = Turbit()

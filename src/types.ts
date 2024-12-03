@@ -67,8 +67,8 @@ export const rarityMap = {
     "Double Rare": "DR",
     "Shiny Ultra Rare": "SUR",
     "Shiny Holo Rare": "SR",
-    "Common": "C",
-    "Uncommon": "U",
+    //"Common": "C",
+    //"Uncommon": "U",
     "Rare": "R",
 } as const
 
