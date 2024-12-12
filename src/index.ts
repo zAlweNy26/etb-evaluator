@@ -1,7 +1,9 @@
+
 import { ofetch } from 'ofetch'
 import { rarityMap, type Expansion, type Product, type Rarity } from './types'
 import pullRates from './pull_rates.json'
 import prompts from 'prompts'
+import chalk from 'chalk'
 import { performance } from 'perf_hooks'
 import { BaseN } from 'js-combinatorics'
 import { SingleBar, Presets } from 'cli-progress'
@@ -43,12 +45,13 @@ const response = await prompts([
         message: 'How many packs are you going to open? (DON\'T GO FURTHER THAN 4 PACKS OR YOUR PC WILL DIE)',
         initial: 3,
         min: 1,
+        max: 9,
     }, {
         name: 'price',
         type: 'number',
         message: 'How much would it cost?',
         initial: 15,
-        min: 1,
+        min: 0,
     }
 ])
 
@@ -78,10 +81,10 @@ const res = await authFetch<Record<string, Product[]>>('/marketplace/products', 
 const availableRarities = [...new Set(
     Object.values(res).flat().map(p => p.properties_hash.pokemon_rarity)
 )].filter(Boolean)
-console.log(`\nRarities present in the expansion: `)
+console.log(chalk.cyan(`\nRarities present in the expansion: `))
 console.log(availableRarities.join(', '))
-console.log('')
 
+console.log(chalk.cyan('\nTen most expensive cards in the expansion:'))
 const products = Object.values(res).map(p => {
     const res = p.filter(b =>
         b.properties_hash.condition === 'Near Mint' &&
@@ -101,8 +104,6 @@ console.log(orderedProducts.slice(0, 10)
     })
     .join('\n'))
 
-console.log(`\nTotal products: ${products.length}`)
-
 const rareCards = products.filter(p => p.properties_hash.pokemon_rarity === 'Rare').length
 //console.log(`Rare cards: ${rareCards}`)
 
@@ -121,11 +122,10 @@ const combos = new BaseN(products.map(p => {
 }), response.numPacks)
 
 const totCombos = Number(combos.length)
-console.log(`Total combinations: ${totCombos}\n`)
-
+console.log(chalk.bold(`\nTotal products: ${products.length} | Total combinations: ${totCombos}\n`))
 // Initialize the progress bar
 const progressBar = new SingleBar({ 
-    format: 'Processing combinations: {bar} {percentage}% | {value}/{total} combos',
+    format: `${chalk.bold('Processing combinations:')} {bar} {percentage}% | {value}/{total} combos`,
     fps: 15,
     hideCursor: true
 }, Presets.shades_classic)
@@ -150,19 +150,7 @@ const timeEnd = performance.now()
 console.log(`Combinations processed in ${((timeEnd - timeStart) / 1000).toFixed(3)}s`)
 
 // TODO: Check if the algorithm is correct
-//console.log(`\nWorth: ${totWorth} / ${totCombos} (${(totWorth * 100).toFixed(5)} %)`)
-console.log(`\nProbability of pay off: ${(totWorth * 100).toFixed(3)} %`)
-
-// TODO: Implement multi-threading to speed up the process
-/*
-const turbit = Turbit()
-const combos = await turbit.run(combination, {
-    type: 'extended',
-    args: [3],
-    data: [3]
-})
-
-console.dir(combos)
-*/
+console.log(`\nExpansion: ${specificExp.name} (${specificExp.code.toUpperCase()}) | Packs: ${response.numPacks} | Price: ${response.price}€ (${(response.price / response.numPacks).toFixed(2)}€ each)`)
+console.log(chalk.bold(`Probability of pay off: ${chalk.green(`${(totWorth * 100).toFixed(3)} %`)}`))
 
 process.exit(0)
