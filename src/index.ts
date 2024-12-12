@@ -1,8 +1,8 @@
-import { ofetch } from "ofetch"
-import { rarityMap, type Expansion, type Product, type Rarity } from "./types"
+import { ofetch } from 'ofetch'
+import { rarityMap, type Expansion, type Product, type Rarity } from './types'
 import pullRates from './pull_rates.json'
-import prompts from "prompts"
-//import Turbit from 'turbit'
+import prompts from 'prompts'
+import { performance } from 'perf_hooks'
 import { BaseN } from 'js-combinatorics'
 import { SingleBar, Presets } from 'cli-progress'
 
@@ -16,7 +16,7 @@ const authFetch = ofetch.create({
 
 const availableExpansions = Object.keys(pullRates).map(exp => exp.toLowerCase())
 const expansions = await authFetch<Expansion[]>('/expansions')
-const filteredExpansions = expansions.filter(expansion => 
+const filteredExpansions = expansions.filter(expansion =>
     expansion.game_id === 5 && // Pokémon
     availableExpansions.includes(expansion.code) // Only expansions we have pull rates for
 )
@@ -55,11 +55,11 @@ const getPullRate = (rarity: string) => {
     return { perc: (1 / rate) * 100, rate }
 }
 
-const res = await authFetch<Record<string, Product[]>>('/marketplace/products', { 
-    params: { 
+const res = await authFetch<Record<string, Product[]>>('/marketplace/products', {
+    params: {
         expansion_id: specificExp.id,
         foil: false
-    } 
+    }
 })
 
 // List all rarities present in the expansion
@@ -85,18 +85,18 @@ const orderedProducts = products.sort((a, b) => b.price.cents - a.price.cents)
 console.log(orderedProducts.slice(0, 10)
     .map(p => {
         const { perc, rate } = getPullRate(p.properties_hash.pokemon_rarity)
-        return `${p.name_en} (${p.properties_hash.pokemon_rarity}) - ${p.price.formatted} | ${perc.toFixed(5)} % (${rate})`
+        return `${p.name_en} (${p.properties_hash.pokemon_rarity}) - ${p.price.formatted} | ${perc.toFixed(5)} % (1/${rate})`
     })
     .join('\n'))
 
 console.log(`\nTotal products: ${products.length}`)
 
+const rareCards = products.filter(p => p.properties_hash.pokemon_rarity === 'Rare').length
+//console.log(`Rare cards: ${rareCards}`)
+
 const totPacks = 3 // WARNING: DON'T GO FURTHER THAN 4 PACKS OR YOUR PC WILL DIE
 
-console.time('Combinations')
-
-const rareCards = products.filter(p => p.properties_hash.pokemon_rarity === 'Rare').length;
-//console.log(`Rare cards: ${rareCards}`)
+const timeStart = performance.now()
 
 const combos = new BaseN(products.map(p => {
     let rate = (1 / anyPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]]) / products.filter(s => s.properties_hash.pokemon_rarity === p.properties_hash.pokemon_rarity).length
@@ -106,50 +106,46 @@ const combos = new BaseN(products.map(p => {
         rate = (1 - allRates) / rareCards
     }
     //console.log(rate)
-    return { 
-        price: p.price.cents / 100, 
+    return {
+        price: p.price.cents / 100,
         rarity: rate
     }
 }), totPacks)
 
-//console.dir(combos)
+const totCombos = Number(combos.length)
+console.log(`Total combinations: ${totCombos}\n`)
 
 // Initialize the progress bar
 const progressBar = new SingleBar(
-    {
-        format: 'Processing Combinations | {bar} | {percentage}% || {value}/{total} combos',
-    },
+    { format: 'Processing combinations: {bar} {percentage}% - {value}/{total} combos' },
     Presets.shades_classic
-);
+)
 
-progressBar.start(Number(combos.length), 0);
+progressBar.start(Number(combos.length), 0)
 
 const etbPrice = 5 * totPacks
-let totWorth = 0
-let processed = 0;
+let totWorth = 0, processed = 0
 
 for (const combo of combos) {
     const worth = combo.reduce((acc, c) => acc + c.price, 0)
     const rate = combo.reduce((acc, c) => acc * c.rarity, 1)
     //console.log(`Worth: ${worth.toFixed(2)} | Rate: ${rate}`)
     if (worth >= etbPrice) totWorth += rate
-
-    // Update the progress bar
-    processed += 1;
-    progressBar.update(processed);
+    progressBar.update(++processed)
 }
 
 // Stop the progress bar
-progressBar.stop();
+progressBar.stop()
 
-console.timeEnd('Combinations')
-const totCombos = Number(combos.length)
-console.log(`Total combinations: ${totCombos}`)
+const timeEnd = performance.now()
+
+console.log(`Combinations processed in ${((timeEnd - timeStart) / 1000).toFixed(3)}s`)
 
 // TODO: Check if the algorithm is correct
 //console.log(`\nWorth: ${totWorth} / ${totCombos} (${(totWorth * 100).toFixed(5)} %)`)
-console.log(`\nProbability of pay off: ${(totWorth * 100).toFixed(5)} %`)
+console.log(`\nProbability of pay off: ${(totWorth * 100).toFixed(3)} %`)
 
+// TODO: Implement multi-threading to speed up the process
 /*
 const turbit = Turbit()
 const combos = await turbit.run(combination, {
