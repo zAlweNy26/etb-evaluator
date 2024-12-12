@@ -37,6 +37,18 @@ const response = await prompts([
         type: 'autocomplete',
         message: 'Pick an expansion:',
         choices: filteredExpansions.reverse().map(exp => ({ title: `${exp.name} (${exp.code.toUpperCase()})`, value: exp.code }))
+    }, {
+        name: 'numPacks',
+        type: 'number',
+        message: 'How many packs are you going to open? (DON\'T GO FURTHER THAN 4 PACKS OR YOUR PC WILL DIE)',
+        initial: 3,
+        min: 1,
+    }, {
+        name: 'price',
+        type: 'number',
+        message: 'How much would it cost?',
+        initial: 15,
+        min: 1,
     }
 ])
 
@@ -94,44 +106,40 @@ console.log(`\nTotal products: ${products.length}`)
 const rareCards = products.filter(p => p.properties_hash.pokemon_rarity === 'Rare').length
 //console.log(`Rare cards: ${rareCards}`)
 
-const totPacks = 3 // WARNING: DON'T GO FURTHER THAN 4 PACKS OR YOUR PC WILL DIE
-
 const timeStart = performance.now()
 
 const combos = new BaseN(products.map(p => {
     let rate = (1 / anyPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]]) / products.filter(s => s.properties_hash.pokemon_rarity === p.properties_hash.pokemon_rarity).length
-    //let rate = 1 / specificPullRates[rarityMap[p.properties_hash.pokemon_rarity as Rarity]]
     if (p.properties_hash.pokemon_rarity === 'Rare') {
         const allRates = Object.values(anyPullRates).reduce((acc, r) => acc + (1 / r), 0)
         rate = (1 - allRates) / rareCards
     }
-    //console.log(rate)
     return {
         price: p.price.cents / 100,
         rarity: rate
     }
-}), totPacks)
+}), response.numPacks)
 
 const totCombos = Number(combos.length)
 console.log(`Total combinations: ${totCombos}\n`)
 
 // Initialize the progress bar
-const progressBar = new SingleBar(
-    { format: 'Processing combinations: {bar} {percentage}% - {value}/{total} combos' },
-    Presets.shades_classic
-)
+const progressBar = new SingleBar({ 
+    format: 'Processing combinations: {bar} {percentage}% | {value}/{total} combos',
+    fps: 15,
+    hideCursor: true
+}, Presets.shades_classic)
 
 progressBar.start(Number(combos.length), 0)
 
-const etbPrice = 5 * totPacks
-let totWorth = 0, processed = 0
+let totWorth = 0
 
 for (const combo of combos) {
     const worth = combo.reduce((acc, c) => acc + c.price, 0)
     const rate = combo.reduce((acc, c) => acc * c.rarity, 1)
     //console.log(`Worth: ${worth.toFixed(2)} | Rate: ${rate}`)
-    if (worth >= etbPrice) totWorth += rate
-    progressBar.update(++processed)
+    if (worth >= response.price) totWorth += rate
+    progressBar.increment()
 }
 
 // Stop the progress bar
